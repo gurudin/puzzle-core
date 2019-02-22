@@ -1,9 +1,11 @@
 <?php
 namespace Puzzle\Console\Migrate;
 
-use Puzzle\Console\Console;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
-class Create extends Console
+class Create extends Command
 {
     public function __construct()
     {
@@ -14,6 +16,7 @@ class Create extends Console
     {
         $this->setName('migrate:create')
             ->setDescription('Creates a new migration.');
+            // ->setAliases(['aa']);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
