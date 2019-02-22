@@ -1,0 +1,20 @@
+{
+    "name": "gurudin/puzzle-core",
+    "description": "Delightfully simple forum software.",
+    "keywords": [
+        "forum",
+        "discussion"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">=7.1",
+        "symfony/console": "4.2.*",
+        "illuminate/container": "5.5.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Puzzle\\": "src/"
+        },
+        "files": ["src/helpers.php"]
+    }
+}
