@@ -67,7 +67,7 @@ if (!function_exists('get_extension')) {
                     break;
                 
                 default:
-                    $extension[] = Arr::get($pageck, 'extra');
+                    $extension[] = array_merge(Arr::get($pageck, 'extra'), ['package' => Arr::get($pageck, 'name')]);
                     break;
             }
         }

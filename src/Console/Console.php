@@ -1,11 +1,11 @@
 <?php
 namespace Puzzle\Console;
 
-use Symfony\Component\Console\Command\Command;
+// use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Application;
 use Puzzle\Extension\Extension;
 
-class Console extends Command
+class Console
 {
     /**
      * @var array
@@ -30,6 +30,7 @@ class Console extends Command
 
     public function __construct(array $paths)
     {
+        // print_r($paths);
         $this->paths = $paths;
         $this->extension = get_instance(Extension::class);
     }
@@ -37,10 +38,10 @@ class Console extends Command
 
     public function listen()
     {
-        $application = new Application('puzzle', VERSION);
+        $application = new Application('Puzzle', VERSION);
 
         foreach ($this->getCommands() as $class) {
-            $application->add(new $class);
+            $application->add(new $class($this->paths));
         }
 
         $application->run();

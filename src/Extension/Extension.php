@@ -44,6 +44,39 @@ class Extension
      *
      * @return array
      */
+    public function getFiles(array $paths)
+    {
+        $files = [];
+
+        if (empty($paths)) {
+            return $files;
+        }
+
+        $filesystem = get_app('Illuminate\Filesystem\Filesystem');
+
+        foreach ($paths as $path) {
+            if (!$filesystem->exists($path)) {
+                continue;
+            }
+
+            $allFiles = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            foreach ($allFiles as $file) {
+                $files[] = ['name' => $file->getFileName(), 'path' => $file->getRealPath()];
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Returns all classes in the directory.
+     *
+     * @param array $paths
+     *
+     * @return array
+     */
     public function getClasses(array $paths)
     {
         $classes = [];
