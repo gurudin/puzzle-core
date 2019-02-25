@@ -9,7 +9,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Puzzle\Extension\Console\MigrateCommand;
 
-class Create extends Command
+class Update extends Command
 {
     private $paths;
 
@@ -22,7 +22,7 @@ class Create extends Command
 
     protected function configure()
     {
-        $this->setName('migrate:create')
+        $this->setName('migrate:update')
             ->addArgument(
                 'name',
                 InputArgument::REQUIRED,
@@ -33,8 +33,7 @@ class Create extends Command
                 InputArgument::OPTIONAL,
                 'The package name of the migration.'
             )
-            ->setDescription('Creates a new migration (create table).');
-            // ->setAliases(['aa']);
+            ->setDescription('Creates a new migration (update table).');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -43,7 +42,7 @@ class Create extends Command
         $package = $input->getArgument('package');
         
         $result = MigrateCommand::getInstance()->save(
-            MigrateCommand::getInstance()::MIGRATE_CREATE,
+            MigrateCommand::getInstance()::MIGRATE_UPDATE,
             $this->paths['base'],
             $name,
             $package === null ? '' : $package

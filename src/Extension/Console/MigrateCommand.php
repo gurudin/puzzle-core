@@ -56,6 +56,10 @@ class MigrateCommand
         $allFiles = Extension::getInstance()->getFiles($migratePaths);
         foreach ($allFiles as $file) {
             $fileArr = \explode("_", $file['name']);
+            if (count($fileArr) < 4) {
+                continue;
+            }
+
             $migrations[] = [
                 'date' => "{$fileArr[0]}-{$fileArr[1]}-{$fileArr[2]} "
                     . substr($fileArr[3], 0, 2) . ":" . substr($fileArr[3], 2, 2) . ":" . substr($fileArr[3], 4, 2),
@@ -110,7 +114,7 @@ class MigrateCommand
 
         $fileName = date('Y_m_d_His') . '_' . $name . '.php';
         $path     = $migrationPath . '/' . $fileName;
-        $stub     = $filesystem->get(__DIR__ . '/../../Stubs/migrations/' . self::MIGRATE_CREATE . '.stub');
+        $stub     = $filesystem->get(__DIR__ . '/../../Stubs/migrations/' . $migrateType . '.stub');
         
         $filesystem->put($path, $stub);
 
