@@ -7,6 +7,9 @@ use Illuminate\Support\Collection;
 
 class MigrateCommand
 {
+    const MIGRATE_CREATE = 'create';
+    const MIGRATE_UPDATE = 'update';
+
     /**
      * The current globally available 'local' (if any).
      *
@@ -30,12 +33,19 @@ class MigrateCommand
 
     /**
      * Dispose migrate history.
+     *
+     * @param array $paths
+     *
+     * @return array
      */
     public function history(array $paths)
     {
         $migrations     = [];
-        $migratePaths[] = $paths['base'] . '/vendor/gurudin/puzzle-core/migrations';
         $extensions     = get_extension($paths['base']);
+        $migratePaths   = [
+            $paths['base'] . '/vendor/gurudin/puzzle-core/migrations',
+            $paths['base'] . '/resources/migrations'
+        ];
 
         foreach ($extensions as $ext) {
             if (!empty(Arr::get($ext, 'package'))) {
@@ -58,5 +68,52 @@ class MigrateCommand
         })->all();
 
         return $migrations;
+    }
+
+    /**
+     * Dispose migrate save (create/update).
+     *
+     * @param string $migrateType
+     * @param string $basePath
+     * @param string $name
+     * @param string $package
+     *
+     * @return array ['status' => true|false, 'msg' => '', 'name' => '', 'fullPath' => '']
+     */
+    public function save(string $migrateType, string $basePath, string $name, string $package)
+    {
+        $filesystem = get_app('Illuminate\Filesystem\Filesystem');
+
+        $targetPath = $package == ''
+            ? $basePath . '/resources'
+            : $basePath . '/vendor/' . $package;
+
+        $migrationPath = $targetPath . '/migrations';
+
+        if (!$filesystem->exists($targetPath)) {
+            return [
+                'status' => false,
+                'msg' => 'Directory does not exist',
+                'fullPath' => $targetPath
+            ];
+        }
+
+        if (!$filesystem->exists($migrationPath)) {
+            if (!$filesystem->makeDirectory($migrationPath, 0775)) {
+                return [
+                    'status' => false,
+                    'msg' => 'Directory creation failed',
+                    'fullPath' => $migrationPath
+                ];
+            }
+        }
+
+        $fileName = date('Y_m_d_His') . '_' . $name . '.php';
+        $path     = $migrationPath . '/' . $fileName;
+        $stub     = $filesystem->get(__DIR__ . '/../../Stubs/migrations/' . self::MIGRATE_CREATE . '.stub');
+        
+        $filesystem->put($path, $stub);
+
+        return ['status' => true, 'msg' => 'Created migration', 'name' => $fileName, 'fullPath' => $migrationPath];
     }
 }

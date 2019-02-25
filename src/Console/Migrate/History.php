@@ -4,6 +4,7 @@ namespace Puzzle\Console\Migrate;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Puzzle\Extension\Console\MigrateCommand;
 
 class History extends Command
@@ -26,11 +27,14 @@ class History extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $migrations = MigrateCommand::getInstance()->history($this->paths);
-
-        $output->writeln("");
-        $output->writeln("<comment>A total of " . count($migrations) . " application migrations</comment>");
+        $list = [];
         foreach ($migrations as $migration) {
-            $output->writeln("\t({$migration['date']}) {$migration['name']}");
+            $list[] = "({$migration['date']}) {$migration['name']}";
         }
+        
+        $io = new SymfonyStyle($input, $output);
+        
+        $io->title("A total of " . count($migrations) . " application migrations");
+        $io->listing($list);
     }
 }
