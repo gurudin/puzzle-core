@@ -34,7 +34,6 @@ class Create extends Command
                 'The package name of the migration.'
             )
             ->setDescription('Creates a new migration (create table).');
-            // ->setAliases(['aa']);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
