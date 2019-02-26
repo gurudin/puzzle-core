@@ -4,6 +4,14 @@ namespace Puzzle\Extension\Console;
 use Puzzle\Extension\Extension;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Migrations\MigrationCreator;
+use Illuminate\Database\Migrations\Migrator;
+
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Migrations\DatabaseMigrationRepository;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Connectors\ConnectionFactory;
 
 class MigrateCommand
 {
@@ -16,6 +24,16 @@ class MigrateCommand
      * @var static
      */
     public static $instance;
+
+    /**
+     * @var Illuminate\Database\Migrations\MigrationCreator
+     */
+    private $creator;
+
+    private function __construct()
+    {
+        $this->creator = new MigrationCreator(get_app('Illuminate\Filesystem\Filesystem'));
+    }
 
     /**
      * Set the globally available instance of the container.
@@ -35,10 +53,11 @@ class MigrateCommand
      * Dispose migrate history.
      *
      * @param array $paths
+     * @param bool $isFullPaths
      *
      * @return array
      */
-    public function history(array $paths)
+    public function history(array $paths, bool $isFullPaths = false)
     {
         $migrations     = [];
         $extensions     = get_extension($paths['base']);
@@ -54,6 +73,16 @@ class MigrateCommand
         }
 
         $allFiles = Extension::getInstance()->getFiles($migratePaths);
+        if ($isFullPaths) {
+            foreach ($allFiles as $inx => $file) {
+                $fileArr = \explode("_", $file['name']);
+                if (count($fileArr) < 4) {
+                    unset($allFiles[$inx]);
+                }
+            }
+            return array_values($allFiles);
+        }
+
         foreach ($allFiles as $file) {
             $fileArr = \explode("_", $file['name']);
             if (count($fileArr) < 4) {
@@ -86,15 +115,13 @@ class MigrateCommand
      */
     public function save(string $migrateType, string $basePath, string $name, string $package)
     {
-        $filesystem = get_app('Illuminate\Filesystem\Filesystem');
-
         $targetPath = $package == ''
             ? $basePath . '/resources'
             : $basePath . '/vendor/' . $package;
 
         $migrationPath = $targetPath . '/migrations';
 
-        if (!$filesystem->exists($targetPath)) {
+        if (!$this->creator->getFilesystem()->exists($targetPath)) {
             return [
                 'status' => false,
                 'msg' => 'Directory does not exist',
@@ -102,8 +129,8 @@ class MigrateCommand
             ];
         }
 
-        if (!$filesystem->exists($migrationPath)) {
-            if (!$filesystem->makeDirectory($migrationPath, 0775)) {
+        if (!$this->creator->getFilesystem()->exists($migrationPath)) {
+            if (!$this->creator->getFilesystem()->makeDirectory($migrationPath, 0775)) {
                 return [
                     'status' => false,
                     'msg' => 'Directory creation failed',
@@ -111,13 +138,72 @@ class MigrateCommand
                 ];
             }
         }
-
-        $fileName = date('Y_m_d_His') . '_' . $name . '.php';
-        $path     = $migrationPath . '/' . $fileName;
-        $stub     = $filesystem->get(__DIR__ . '/../../Stubs/migrations/' . $migrateType . '.stub');
         
-        $filesystem->put($path, $stub);
+        $path = $this->creator->create(
+            $name,
+            $migrationPath,
+            '{{table}}',
+            $migrateType == self::MIGRATE_CREATE ? true : false
+        );
 
-        return ['status' => true, 'msg' => 'Created migration', 'name' => $fileName, 'fullPath' => $migrationPath];
+        return [
+            'status' => true,
+            'msg' => 'Created migration',
+            'name' => $this->creator->getFilesystem()->basename($path),
+            'fullPath' => $migrationPath
+        ];
+    }
+
+    /**
+     * Dispose migrate upgrades.
+     *
+     * @param array $paths
+     * @param string $name
+     *
+     * @return array
+     */
+    public function up(array $paths, string $name)
+    {
+        $migrations = $this->history($paths, true);
+
+        $conf = [
+            'driver' => 'mysql',
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'puzzle',
+            'username' => 'root',
+            'password' => '',
+            'unix_socket' => '',
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ];
+
+        $capsule = new Capsule();
+
+        $capsule->addConnection($conf);
+        $capsule->setAsGlobal();
+        $capsule->bootEloquent();
+
+        
+        
+        $connectionResolver = new ConnectionResolver();
+        $connectionResolver->addConnection('default', Capsule::connection());
+        $connectionResolver->setDefaultConnection('default');
+
+        $migrator = new Migrator(
+            new DatabaseMigrationRepository($connectionResolver, 'migrations'),
+            $connectionResolver,
+            $this->creator->getFilesystem()
+        );
+        
+        foreach ($migrations = array_column($migrations, 'path') as $path) {
+            $this->creator->getFilesystem()->requireOnce($path);
+        }
+        
+        
+        print_r($migrator->runPending($migrations));
     }
 }
